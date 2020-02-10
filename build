@@ -1,0 +1,5 @@
+#!/bin/bash
+dotnet build Packets/Packets.csproj
+dotnet build AlumniSocketCore/AlumniSocketCore.csproj
+dotnet build AlumniDNS/AlumniDNS.csproj
+dotnet build AlumniDNSUpdater/AlumniDNSUpdater.csproj
