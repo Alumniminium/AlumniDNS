@@ -6,18 +6,12 @@ namespace AlumniDNS.Database
     public static class Db
     {
         private static readonly SquigglyContext db = new SquigglyContext();
-        internal static void EnsureDb() => db.Database.EnsureCreated();
 
-        public static bool CustomerExists(Customer customer)
-        {
-            var dbCustomer = db.Customers.AsQueryable().FirstOrDefault(c => c.Username == customer.Username);
-            return dbCustomer != null;
-        }
-        public static bool SubdomainExists(Subdomain subdomain)
-        {
-            var dbSubdomain = db.Subdomains.AsQueryable().FirstOrDefault(c => c.Name == subdomain.Name);
-            return dbSubdomain != null;
-        }
+        internal static void EnsureDb() => db.Database.EnsureCreated();
+        public static bool CustomerExists(Customer customer) => db.Customers.AsQueryable().FirstOrDefault(c => c.Username == customer.Username) != null;
+        public static bool SubdomainExists(Subdomain subdomain) => db.Subdomains.AsQueryable().FirstOrDefault(c => c.Name == subdomain.Name) != null;
+        public static ulong GetNextUniqueId() => (ulong)(db.Customers.Count() + 1);
+        public static int GetNextSubdomainUniqueId() => db.Subdomains.Count() + 1;
 
         public static bool AddCustomer(Customer customer)
         {
@@ -55,8 +49,8 @@ namespace AlumniDNS.Database
 
         public static bool Authenticate(ref Customer customer)
         {
-            var user = customer.Username;
-            var dbCustomer = db.Customers.AsQueryable().FirstOrDefault(c => c.Username == user);
+            var username = customer.Username;
+            var dbCustomer = db.Customers.AsQueryable().FirstOrDefault(c => c.Username == username);
             if (dbCustomer != null && dbCustomer.Password == customer.Password)
             {
                 dbCustomer.Subdomains = db.Subdomains.AsQueryable().Where(s => s.CustomerId == dbCustomer.CustomerId).ToList();
@@ -67,10 +61,5 @@ namespace AlumniDNS.Database
             }
             return false;
         }
-
-        public static ulong GetNextUniqueId() => (ulong)(db.Customers.Count() + 1);
-
-        public static int GetNextSubdomainUniqueId() => db.Subdomains.Count() + 1;
-
     }
 }

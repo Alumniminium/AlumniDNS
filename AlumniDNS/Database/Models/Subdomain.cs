@@ -12,9 +12,6 @@ namespace AlumniDNS.Database.Models
         public string IP { get; set; }
         public DateTime LastUpdate { get; set; }
 
-        public Subdomain()
-        {
-            LastUpdate = DateTime.Now;
-        }
+        public Subdomain() => LastUpdate = DateTime.Now;
     }
 }

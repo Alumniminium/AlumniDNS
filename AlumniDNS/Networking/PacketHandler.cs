@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Packets;
@@ -13,22 +12,18 @@ namespace AlumniDNS.Networking
 {
     public static class PacketHandler
     {
-        public static ClientSocket Client;
-        public static Customer Customer;
-
         public static void Handle(ClientSocket client, byte[] packet)
         {
             var id = BitConverter.ToUInt16(packet, 4);
-            Client = client;
-            Customer = (Customer)client.StateObject;
+            var customer = (Customer)client.StateObject;
 
             switch (id)
             {
                 case 1000:
-                    ProcessLogin(packet);
+                    ProcessLogin(packet, customer, client);
                     break;
                 case 1002:
-                    ProcessTransaction(packet);
+                    ProcessTransaction(packet, customer, client);
                     break;
                 default:
                     Console.WriteLine("Invalid packet received from " + client.Socket.RemoteEndPoint);
@@ -37,7 +32,7 @@ namespace AlumniDNS.Networking
             }
         }
 
-        private static void ProcessTransaction(byte[] packet)
+        private static void ProcessTransaction(byte[] packet, Customer customer, ClientSocket client)
         {
             var msgTransaction = (MsgTransaction)packet;
             var domain = msgTransaction.GetSubdomain();
@@ -45,17 +40,17 @@ namespace AlumniDNS.Networking
             {
                 case MsgTransactionType.Update:
                     {
-                        var subdomain = Customer.Subdomains.FirstOrDefault(s => s.Name == domain);
+                        var subdomain = customer.Subdomains.FirstOrDefault(s => s.Name == domain);
                         if (subdomain != null)
                         {
                             msgTransaction.Type = MsgTransactionType.Success;
-                            Updater.Update(domain, Customer.GetIp());
+                            Updater.Update(domain, customer.GetIp());
                             subdomain.LastUpdate = DateTime.Now;
                         }
                         else
                             msgTransaction.Type = MsgTransactionType.Fail_NotOwner;
 
-                        Customer.Send(msgTransaction);
+                        customer.Send(msgTransaction);
                         break;
                     }
                 case MsgTransactionType.Add:
@@ -63,13 +58,13 @@ namespace AlumniDNS.Networking
                         var subdomain = new Subdomain
                         {
                             Name = domain,
-                            CustomerId = Customer.CustomerId,
+                            CustomerId = customer.CustomerId,
                             UniqueId = Db.GetNextSubdomainUniqueId(),
-                            IP = Customer.GetIp()
+                            IP = customer.GetIp()
                         };
                         if (!Regex.IsMatch(domain, "^[A-Za-z]+$", RegexOptions.Compiled))
                             msgTransaction.Type = MsgTransactionType.Fail_IllegalCharacters;
-                        else if (Customer.Subdomains.Count == 5)
+                        else if (customer.Subdomains.Count == 5)
                             msgTransaction.Type = MsgTransactionType.Fail_OutOfSlots;
                         else if (subdomain.Name.Length > 16)
                             msgTransaction.Type = MsgTransactionType.Fail_TooLong;
@@ -77,7 +72,7 @@ namespace AlumniDNS.Networking
                             msgTransaction.Type = MsgTransactionType.Fail_Exists;
                         else
                         {
-                            Customer.Subdomains.Add(subdomain);
+                            customer.Subdomains.Add(subdomain);
                             Db.AddSubdomain(subdomain);
                             msgTransaction.Type = MsgTransactionType.Success;
                         }
@@ -86,7 +81,7 @@ namespace AlumniDNS.Networking
                     }
                 case MsgTransactionType.Remove:
                     {
-                        var ownsDomain = Customer.Subdomains.Any(subdomain => subdomain.Name == domain);
+                        var ownsDomain = customer.Subdomains.Any(subdomain => subdomain.Name == domain);
 
                         if (ownsDomain)
                         {
@@ -100,10 +95,10 @@ namespace AlumniDNS.Networking
                     }
             }
 
-            Client.Send(msgTransaction);
+            client.Send(msgTransaction);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static unsafe void ProcessLogin(byte[] packet)
+        private static unsafe void ProcessLogin(byte[] packet, Customer customer, ClientSocket client)
         {
             fixed (byte* p = packet)
             {
@@ -112,24 +107,24 @@ namespace AlumniDNS.Networking
                 var id = msgLogin->UniqueId;
                 Console.WriteLine(user + " " + pass + " " + id);
 
-                Customer = new Customer
+                customer = new Customer
                 {
                     Username = user,
                     Password = pass
                 };
 
-                Client.StateObject = Customer;
-                Customer.Socket = Client;
+                client.StateObject = customer;
+                customer.Socket = client;
 
-                if (Db.Authenticate(ref Customer))
-                    msgLogin->UniqueId = (uint)Customer.CustomerId;
-                else if (Db.AddCustomer(Customer))
-                    msgLogin->UniqueId = (uint)Customer.CustomerId;
+                if (Db.Authenticate(ref customer))
+                    msgLogin->UniqueId = (uint)customer.CustomerId;
+                else if (Db.AddCustomer(customer))
+                    msgLogin->UniqueId = (uint)customer.CustomerId;
 
-                Customer.Send(*msgLogin);
+                customer.Send(*msgLogin);
 
-                var domains = Customer.Subdomains.Aggregate("", (c, s) => c + (s.Name + " " + s.IP + "#"));
-                Customer.Send(MsgDomainList.Create(domains));
+                var domains = customer.Subdomains.Aggregate("", (c, s) => c + (s.Name + " " + s.IP + "#"));
+                customer.Send(MsgDomainList.Create(domains));
             }
         }
     }

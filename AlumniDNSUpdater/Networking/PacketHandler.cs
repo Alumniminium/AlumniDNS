@@ -16,6 +16,7 @@ namespace AlumniDNSUpdater.Networking
                     {
                         var msgLogin = (MsgLogin)buffer;
                         var uniqueId = msgLogin.UniqueId;
+
                         if (uniqueId != 0)
                             Console.WriteLine("Authentication successful. Your customer Id is: " + uniqueId);
                         else
@@ -23,40 +24,40 @@ namespace AlumniDNSUpdater.Networking
                         break;
                     }
                 case 1001:
-                {
+                    {
                         var msgDomainList = (MsgDomainList)buffer;
                         var domains = msgDomainList.GetSubdomains();
+
                         Console.WriteLine("Here are your domains:");
-                        foreach (var kvp in domains)
+
+                        foreach (var entry in domains)
                         {
-                            if (string.IsNullOrEmpty(kvp))
+                            if (string.IsNullOrEmpty(entry))
                                 continue;
-                            var parts = kvp.Split(' ');
+
+                            var parts = entry.Split(' ');
                             var domain = parts[0];
                             var ip = parts[1];
+
                             Console.WriteLine(domain + " - " + ip);
                             client.Subdomains.Add(new Subdomain(domain, ip));
                         }
 
-                        if (client.Subdomains.Count > 0)
+                        if (client.Subdomains.Count == 0)
+                            break;
+
+                        Console.WriteLine("Updating:");
+                        foreach (var subdomain in client.Subdomains)
                         {
-                            Console.WriteLine("Updating:");
-                            foreach (var subdomain in client.Subdomains)
-                            {
-                                if (subdomain.Update)
-                                {
-                                    Console.WriteLine(subdomain + ".alumni.re");
-                                    client.Send(MsgTransaction.Create(subdomain.Name, MsgTransactionType.Update));
-                                }
-                            }
-                        }
-                        else
-                        {
-                            Console.WriteLine("Doing nothing as you don't own any subdomains.");
+                            if (!subdomain.Update)
+                                continue;
+
+                            Console.WriteLine(subdomain + ".alumni.re");
+                            client.Send(MsgTransaction.Create(subdomain.Name, MsgTransactionType.Update));
                         }
 
                         break;
-                }
+                    }
                 case 1002:
                     {
                         var msgTransaction = (MsgTransaction)buffer;

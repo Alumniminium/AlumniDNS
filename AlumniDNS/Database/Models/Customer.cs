@@ -3,7 +3,6 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Net;
 using AlumniSocketCore.Client;
-using AlumniSocketCore.Server;
 
 namespace AlumniDNS.Database.Models
 {
@@ -17,13 +16,8 @@ namespace AlumniDNS.Database.Models
         [NotMapped]
         public ClientSocket Socket;
 
-        public Customer()
-        {
-            Subdomains = new List<Subdomain>();
-        }
-
+        public Customer() => Subdomains = new List<Subdomain>();
         public void Send(byte[] packet) => Socket?.Send(packet);
-
-        public string GetIp() => ((IPEndPoint) Socket.Socket.RemoteEndPoint).Address.ToString();
+        public string GetIp() => ((IPEndPoint)Socket.Socket.RemoteEndPoint).Address.ToString();
     }
 }
