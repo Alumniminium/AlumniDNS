@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System.Threading.Tasks;
+using System.Collections.Generic;
 using AlumniDNSUpdater.Models;
 using AlumniDNSUpdater.Networking;
 using AlumniSocketCore.Client;
@@ -17,16 +18,22 @@ namespace AlumniDNSUpdater
         public bool IsConnected;
 
 
-        public void ConnectAsync(string ip, ushort port)
+        public Task<bool> ConnectAsync(string ip, ushort port)
         {
-            ReceiveQueue.Start(OnPacket);
             Socket = new ClientSocket(this);
+            ReceiveQueue.Start(OnPacket);
+
+            var tcs = new TaskCompletionSource<bool>();
+            Socket.OnConnected += () => { tcs?.SetResult(true); };
+            Socket.OnDisconnect += () => { tcs?.SetResult(false); };
+
             Socket.OnDisconnect += Disconnected;
             Socket.OnConnected += Connected;
             Socket.ConnectAsync(ip, port);
+            return tcs.Task;
         }
 
-        private void Connected() => IsConnected=true;
+        private void Connected() => IsConnected = true;
 
         private void Disconnected() => ConnectAsync(Ip, Port);
 

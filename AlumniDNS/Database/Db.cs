@@ -17,7 +17,9 @@ namespace AlumniDNS.Database
         {
             if (CustomerExists(customer))
                 return false;
+
             customer.CustomerId = GetNextUniqueId();
+
             db.Customers.Add(customer);
             db.SaveChanges();
 
@@ -27,10 +29,10 @@ namespace AlumniDNS.Database
         {
             if (SubdomainExists(subdomain))
                 return false;
-            db.Subdomains.Add(subdomain);
 
             Updater.Update(subdomain.Name, subdomain.IP);
 
+            db.Subdomains.Add(subdomain);
             db.SaveChanges();
 
             return false;
@@ -38,6 +40,7 @@ namespace AlumniDNS.Database
         public static void RemoveSubdomain(string domain)
         {
             var subdomain = db.Subdomains.FirstOrDefault(s => s.Name == domain);
+
             if (subdomain != null)
             {
                 Updater.Delete(domain);
@@ -51,7 +54,8 @@ namespace AlumniDNS.Database
         {
             var username = customer.Username;
             var dbCustomer = db.Customers.AsQueryable().FirstOrDefault(c => c.Username == username);
-            if (dbCustomer != null && dbCustomer.Password == customer.Password)
+
+            if (dbCustomer?.Password == customer.Password)
             {
                 dbCustomer.Subdomains = db.Subdomains.AsQueryable().Where(s => s.CustomerId == dbCustomer.CustomerId).ToList();
                 dbCustomer.Socket = customer.Socket;
@@ -59,6 +63,7 @@ namespace AlumniDNS.Database
                 customer.Socket.StateObject = dbCustomer;
                 return true;
             }
+
             return false;
         }
     }

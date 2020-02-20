@@ -35,9 +35,8 @@ namespace AlumniDNSUpdater.Networking
                             if (string.IsNullOrEmpty(entry))
                                 continue;
 
-                            var parts = entry.Split(' ');
-                            var domain = parts[0];
-                            var ip = parts[1];
+                            var pair = entry.Split(' ');
+                            var (domain, ip) = (pair[0], pair[1]);
 
                             Console.WriteLine(domain + " - " + ip);
                             client.Subdomains.Add(new Subdomain(domain, ip));

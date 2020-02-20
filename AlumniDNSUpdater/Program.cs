@@ -22,12 +22,8 @@ namespace AlumniDNSUpdater
             Console.Title = "CLIENT APP";
             LoadConfig();
 
-            Client.ConnectAsync(SERVER_IP, SERVER_PORT);
-
-            while (!Client.IsConnected)
-                await Task.Delay(1);
-
-            Client.Send(MsgLogin.Create("user", "pass"));
+            if (await Client.ConnectAsync(SERVER_IP, SERVER_PORT))
+                Client.Send(MsgLogin.Create("user", "pass"));
 
             while (true)
                 Console.ReadLine();
